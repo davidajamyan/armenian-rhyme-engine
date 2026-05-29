@@ -281,7 +281,7 @@
 
         async function flagWord(word, pillElement) {
             try {
-                const response = await fetch('http://localhost:8000/api/flag', {
+                const response = await fetch('https://armenian-rhyme-api-idist.ondigitalocean.app/api/flag', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ word: word })
@@ -322,7 +322,7 @@
             spinner.style.display = 'block'; 
 
             // Build URL
-            let apiUrl = `http://localhost:8000/api/rhyme/${encodeURIComponent(wordInput)}?`;
+            let apiUrl = `https://armenian-rhyme-api-idist.ondigitalocean.app/api/rhyme/${encodeURIComponent(wordInput)}?`;
             if (syllableInput) apiUrl += `syllables=${syllableInput}&`;
             if (isFuzzy) apiUrl += `fuzzy=true`;
 

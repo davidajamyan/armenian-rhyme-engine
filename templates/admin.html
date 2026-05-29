@@ -79,7 +79,7 @@
             container.innerHTML = '<div class="empty-state">Loading queue...</div>';
 
             try {
-                const response = await fetch('http://localhost:8000/api/flagged');
+                const response = await fetch('https://armenian-rhyme-api-idist.ondigitalocean.app/api/flagged');
                 const data = await response.json();
                 
                 if (data.flagged_words.length === 0) {
@@ -115,7 +115,7 @@
             }
 
             try {
-                const response = await fetch(`http://localhost:8000/api/flagged/${action}`, {
+                const response = await fetch(`https://armenian-rhyme-api-idist.ondigitalocean.app/api/flagged/${action}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ word: word })
@@ -145,7 +145,7 @@
             }
 
             try {
-                const response = await fetch(`http://localhost:8000/api/flagged/edit`, {
+                const response = await fetch(`https://armenian-rhyme-api-idist.ondigitalocean.app/api/flagged/edit`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
