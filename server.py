@@ -8,7 +8,7 @@ import os
 from fastapi.middleware.cors import CORSMiddleware
 
 # Load the flagged words into memory
-FLAGGED_FILE = "flagged_words.json"
+FLAGGED_FILE = "data/flagged_words.json"
 if os.path.exists(FLAGGED_FILE):
     with open(FLAGGED_FILE, "r", encoding="utf-8") as f:
         flagged_words = set(json.load(f))
@@ -159,7 +159,7 @@ def count_armenian_syllables(word):
 @app.on_event("startup")
 def load_dictionary():
     print("Waking up server and loading 204,000 words into RAM...")
-    with open("production_armenian_dictionary.json", "r", encoding="utf-8") as f:
+    with open("data/production_armenian_dictionary.json", "r", encoding="utf-8") as f:
         word_database = json.load(f)
         
     for original, root in word_database.items():
@@ -247,7 +247,7 @@ def delete_word(request: AdminWordRequest):
             json.dump(list(flagged_words), f, ensure_ascii=False, indent=4)
             
     # 2. Delete from the massive production dictionary
-    dict_file = "production_armenian_dictionary.json"
+    dict_file = "data/production_armenian_dictionary.json"
     if os.path.exists(dict_file):
         with open(dict_file, "r", encoding="utf-8") as f:
             db = json.load(f)
@@ -271,7 +271,7 @@ def edit_word(request: EditWordRequest):
             json.dump(list(flagged_words), f, ensure_ascii=False, indent=4)
             
     # 2. Update the main dictionary
-    dict_file = "production_armenian_dictionary.json"
+    dict_file = "data/production_armenian_dictionary.json"
     if os.path.exists(dict_file):
         with open(dict_file, "r", encoding="utf-8") as f:
             db = json.load(f)

@@ -63,7 +63,7 @@ def build_ultimate_dictionary(text_filepath):
 if __name__ == "__main__":
     final_dict = build_ultimate_dictionary("eanc.txt")
     
-    with open("production_armenian_dictionary.json", 'w', encoding='utf-8') as f:
+    with open("data/production_armenian_dictionary.json", 'w', encoding='utf-8') as f:
         json.dump(final_dict, f, ensure_ascii=False, indent=4)
         
     print("Success! Pristine dictionary is ready for the web server.")
