@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Armenian Rhyme Engine</title>
+    <style>
+        /* 1. Dark Mode Variables */
+        :root {
+            --bg-color: #f9fafb;
+            --text-color: #1f2937;
+            --card-bg: #ffffff;
+            --border-color: #d1d5db;
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --pill-shadow: rgba(0,0,0,0.05);
+            --text-muted: #6b7280;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #111827;
+            --text-color: #f3f4f6;
+            --card-bg: #1f2937;
+            --border-color: #374151;
+            --primary-color: #3b82f6;
+            --primary-hover: #60a5fa;
+            --pill-shadow: rgba(0,0,0,0.5);
+            --text-muted: #9ca3af;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            margin: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 { color: var(--primary-color); margin-bottom: 10px; }
+        p { color: var(--text-muted); margin-bottom: 30px; }
+
+        /* Top Bar for Dark Mode Toggle */
+        .top-bar {
+            display: flex;
+            justify-content: flex-end;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: -20px;
+        }
+        
+        .theme-btn {
+            background: none; border: none; font-size: 24px;
+            cursor: pointer; padding: 5px; color: var(--text-color);
+        }
+
+        /* 2. Mobile Responsive Search Box */
+        .search-box {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px var(--pill-shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        input[type="text"], input[type="number"] {
+            padding: 12px 15px;
+            font-size: 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            outline: none;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"] { flex-grow: 1; min-width: 200px; }
+        input[type="number"] { width: 100px; }
+        input:focus { border-color: var(--primary-color); }
+
+        button.search-btn {
+            padding: 12px 25px;
+            font-size: 16px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        button.search-btn:hover { background-color: var(--primary-hover); }
+
+        /* 3. Modern Toggle Switch (Fuzzy Rhyme) */
+        .toggle-container {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 14px; font-weight: 500; cursor: pointer;
+        }
+        .switch {
+            position: relative; display: inline-block;
+            width: 44px; height: 24px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--border-color);
+            transition: .4s; border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute; content: "";
+            height: 18px; width: 18px; left: 3px; bottom: 3px;
+            background-color: white; transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--primary-color); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        /* 4. CSS Loading Spinner */
+        .spinner {
+            display: none; /* Hidden by default */
+            margin: 30px auto;
+            width: 40px; height: 40px;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .status { margin-top: 20px; font-size: 16px; color: var(--text-muted); min-height: 24px; }
+        
+        /* 1. Switch to CSS Grid for uniform rows and columns */
+        .results-grid {
+            display: grid;
+            /* Creates responsive columns that are at least 160px wide */
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 15px;
+            width: 100%;
+            margin-top: 30px;
+        }
+        
+        /* 2. Update pill to fill the grid cell uniformly */
+        .rhyme-pill {
+            position: relative;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 10px 15px;
+            border-radius: 8px; /* Slightly squarer looks better in grids */
+            font-size: 16px;
+            box-shadow: 0 1px 2px var(--pill-shadow);
+            transition: transform 0.1s, box-shadow 0.1s, border-color 0.2s;
+            
+            /* Align text and button perfectly */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .rhyme-pill:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px var(--pill-shadow);
+            border-color: var(--primary-color);
+        }
+
+        /* 3. Fix the Layout Shift caused by the report button */
+        .report-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0;
+            
+            /* Use Opacity instead of Display so it always takes up space */
+            opacity: 0; 
+            transition: opacity 0.2s, color 0.2s;
+        }
+
+        /* Show the button smoothly on hover */
+        .rhyme-pill:hover .report-btn {
+            opacity: 1; 
+        }
+        
+        .report-btn:hover {
+            color: var(--danger); /* Make sure --danger is defined in your :root variables! */
+        }
+
+        /* 5. Force headers to span the entire grid */
+        .section-header {
+            grid-column: 1 / -1; /* Start at the first line, end at the last */
+            border-bottom: 2px solid var(--border-color);
+            margin-top: 20px;
+            padding-bottom: 5px;
+            color: var(--primary-color);
+            text-align: left;
+            width: 100%;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 600px) {
+            .search-box { flex-direction: column; align-items: stretch; }
+            input[type="text"], input[type="number"] { width: 100%; box-sizing: border-box; }
+            .toggle-container { justify-content: center; margin: 10px 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <button class="theme-btn" onclick="toggleTheme()" id="themeIcon">🌙</button>
+    </div>
+
+    <div class="container">
+        <h1>Armenian Rhyme Engine</h1>
+        <p>Find perfect phonetic root rhymes from a 195,000+ word database.</p>
+
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Օրինակ՝ գարուն..." onkeypress="handleKeyPress(event)">
+            
+            <input type="number" id="syllableInput" placeholder="Syllables" min="1" max="15" onkeypress="handleKeyPress(event)">
+            
+            <label class="toggle-container">
+                <span class="switch">
+                    <input type="checkbox" id="fuzzyInput">
+                    <span class="slider"></span>
+                </span>
+                Fuzzy Match
+            </label>
+
+            <button class="search-btn" onclick="searchRhyme()">Search</button>
+        </div>
+
+        <div id="loadingSpinner" class="spinner"></div>
+        
+        <div id="statusText" class="status"></div>
+        <div id="resultsContainer" class="results-grid"></div>
+    </div>
+
+    <script>
+        // --- Theme Logic ---
+        function toggleTheme() {
+            const body = document.body;
+            const icon = document.getElementById('themeIcon');
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                icon.innerText = '🌙';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                icon.innerText = '☀️';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // Load saved theme on boot
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.setAttribute('data-theme', 'dark');
+            document.getElementById('themeIcon').innerText = '☀️';
+        }
+
+        // --- Search Logic ---
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                searchRhyme();
+            }
+        }
+
+        async function flagWord(word, pillElement) {
+            try {
+                const response = await fetch('http://localhost:8000/api/flag', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ word: word })
+                });
+
+                if (response.ok) {
+                    // Visually update the pill instantly so the user knows it worked
+                    if (!pillElement.querySelector('.flag-badge')) {
+                        const badge = document.createElement('div');
+                        badge.className = 'flag-badge';
+                        badge.innerText = '?';
+                        pillElement.appendChild(badge);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to flag word:", error);
+                alert("Could not connect to server to report word.");
+            }
+        }
+
+        async function searchRhyme() {
+            const wordInput = document.getElementById('searchInput').value.trim();
+            const syllableInput = document.getElementById('syllableInput').value;
+            const isFuzzy = document.getElementById('fuzzyInput').checked;
+            
+            const statusText = document.getElementById('statusText');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const spinner = document.getElementById('loadingSpinner');
+
+            if (!wordInput) {
+                statusText.innerText = "Please enter a word.";
+                return;
+            }
+
+            // UI State: Clear results, show spinner
+            resultsContainer.innerHTML = '';
+            statusText.innerText = '';
+            spinner.style.display = 'block'; 
+
+            // Build URL
+            let apiUrl = `http://localhost:8000/api/rhyme/${encodeURIComponent(wordInput)}?`;
+            if (syllableInput) apiUrl += `syllables=${syllableInput}&`;
+            if (isFuzzy) apiUrl += `fuzzy=true`;
+
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error("Server error. Is FastAPI running?");
+                const data = await response.json();
+
+                // UI State: Hide spinner
+                spinner.style.display = 'none';
+
+                if (data.total_found === 0) {
+                    statusText.innerText = `No rhymes found ending in "${data.suffix_matched}".`;
+                    return;
+                }
+
+                let successMessage = `Found <strong>${data.total_found}</strong> rhymes ending in "<strong>${data.suffix_matched}</strong>"`;
+                if (syllableInput) successMessage += ` with ${syllableInput} syllables.`;
+                if (isFuzzy) successMessage += ` (Fuzzy mode active)`;
+                statusText.innerHTML = successMessage;
+
+                // Track the current syllable group so we know when to draw a header
+                let currentSyllableCount = 0;
+
+                // Render the words as beautiful "pills"
+                data.rhymes.forEach(rhymeObj => {
+                    
+                    // NEW LOGIC: Inject visual headers if the user didn't request a specific number
+                    if (!syllableInput && rhymeObj.syllables !== currentSyllableCount) {
+                        currentSyllableCount = rhymeObj.syllables;
+                        
+                        const header = document.createElement('h3');
+                        header.className = 'section-header'; // Apply our new grid-spanning CSS!
+                        header.innerText = `${currentSyllableCount} Syllables`;
+                        resultsContainer.appendChild(header);
+                    }
+
+                    const pill = document.createElement('div');
+                    pill.className = 'rhyme-pill';
+                    
+                    // The text of the word
+                    const wordText = document.createElement('span');
+                    wordText.innerText = rhymeObj.word;
+                    pill.appendChild(wordText);
+
+                    // The hidden report button
+                    const reportBtn = document.createElement('button');
+                    reportBtn.className = 'report-btn';
+                    reportBtn.innerText = '🚩';
+                    reportBtn.title = "Report issue with this word";
+                    reportBtn.onclick = () => flagWord(rhymeObj.word, pill);
+                    pill.appendChild(reportBtn);
+
+                    // If it was already flagged in the backend, add the ? badge
+                    if (rhymeObj.is_flagged) {
+                        const badge = document.createElement('div');
+                        badge.className = 'flag-badge';
+                        badge.innerText = '?';
+                        pill.appendChild(badge);
+                    }
+
+                    resultsContainer.appendChild(pill);
+                });
+
+            } catch (error) {
+                spinner.style.display = 'none';
+                statusText.innerText = error.message;
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>

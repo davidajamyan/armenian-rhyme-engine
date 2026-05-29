@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rhyme Engine - Admin Portal</title>
+    <style>
+        :root {
+            --bg-color: #111827;
+            --text-color: #f3f4f6;
+            --card-bg: #1f2937;
+            --border-color: #374151;
+            --primary-color: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 { color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
+        
+        .empty-state {
+            text-align: center; color: #9ca3af; margin-top: 50px; font-size: 18px;
+        }
+
+        .word-card {
+            display: flex; justify-content: space-between; align-items: center;
+            background-color: var(--card-bg); border: 1px solid var(--border-color);
+            padding: 15px 20px; border-radius: 8px; margin-bottom: 10px;
+        }
+
+        .word-text { font-size: 20px; font-weight: bold; }
+
+        .action-btns { display: flex; gap: 10px; }
+
+        button {
+            padding: 8px 15px; font-size: 14px; color: white; border: none;
+            border-radius: 6px; cursor: pointer; font-weight: bold;
+        }
+        
+        .btn-dismiss { background-color: var(--success); }
+        .btn-dismiss:hover { background-color: #059669; }
+        
+        .btn-delete { background-color: var(--danger); }
+        .btn-delete:hover { background-color: #dc2626; }
+
+        .btn-edit { background-color: var(--warning); }
+        .btn-edit:hover { background-color: #d97706; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🛡️ Moderation Queue</h1>
+        <p>Review words flagged by users. You can either dismiss the flag (keep the word) or delete it from the main dictionary.</p>
+
+        <div id="queueContainer">
+            </div>
+    </div>
+
+    <script>
+        async function fetchFlaggedWords() {
+            const container = document.getElementById('queueContainer');
+            container.innerHTML = '<div class="empty-state">Loading queue...</div>';
+
+            try {
+                const response = await fetch('http://localhost:8000/api/flagged');
+                const data = await response.json();
+                
+                if (data.flagged_words.length === 0) {
+                    container.innerHTML = '<div class="empty-state">🎉 The queue is empty! No words need review.</div>';
+                    return;
+                }
+
+                container.innerHTML = ''; // Clear loading text
+                
+                data.flagged_words.forEach(word => {
+                    const card = document.createElement('div');
+                    card.className = 'word-card';
+                    card.innerHTML = `
+                        <div class="word-text">${word}</div>
+                        <div class="action-btns">
+                            <button class="btn-dismiss" onclick="handleAction('${word}', 'dismiss')">✅ Keep</button>
+                            <button class="btn-edit" onclick="handleEdit('${word}')">✏️ Edit</button>
+                            <button class="btn-delete" onclick="handleAction('${word}', 'delete')">🗑️ Delete</button>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                container.innerHTML = '<div class="empty-state" style="color: #ef4444;">Error connecting to server. Is FastAPI running?</div>';
+            }
+        }
+
+        async function handleAction(word, action) {
+            // Confirm before deleting from the main database
+            if (action === 'delete') {
+                const confirmed = confirm(`Are you sure you want to permanently delete "${word}" from the main dictionary?`);
+                if (!confirmed) return;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:8000/api/flagged/${action}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ word: word })
+                });
+
+                if (response.ok) {
+                    // Refresh the list to remove the card from the UI
+                    fetchFlaggedWords();
+                    
+                    if (action === 'delete') {
+                        // Note: The memory Trie needs a reboot to drop the word from active search
+                        alert(`"${word}" was deleted from the JSON database. (Note: You must restart your Python server for it to disappear from live searches).`);
+                    }
+                }
+            } catch (error) {
+                alert("Action failed. Check your server connection.");
+            }
+        }
+
+        async function handleEdit(oldWord) {
+            // Prompt the admin for the corrected spelling
+            const newWord = prompt(`Edit the flagged word:`, oldWord);
+            
+            // If the user hits cancel or leaves it blank, do nothing
+            if (!newWord || newWord.trim() === "" || newWord === oldWord) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:8000/api/flagged/edit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        old_word: oldWord, 
+                        new_word: newWord.trim() 
+                    })
+                });
+
+                if (response.ok) {
+                    fetchFlaggedWords(); // Refresh the list
+                    alert(`Successfully changed "${oldWord}" to "${newWord}" in the JSON database.\n\n(Remember: You must restart your Python server for the change to reflect in live searches).`);
+                }
+            } catch (error) {
+                alert("Edit failed. Check your server connection.");
+            }
+        }
+
+        // Load the queue when the page opens
+        window.onload = fetchFlaggedWords;
+    </script>
+</body>
+</html>
